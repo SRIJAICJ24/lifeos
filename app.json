@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "LifeOS",
+    "slug": "lifeos",
+    "scheme": "lifeos",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": { "package": "com.personal.lifeos" },
+    "ios": { "bundleIdentifier": "com.personal.lifeos" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router", "expo-sqlite", "expo-notifications"],
+    "experiments": { "typedRoutes": true }
+  }
+}

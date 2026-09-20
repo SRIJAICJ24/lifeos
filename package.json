@@ -1,0 +1,43 @@
+{
+  "name": "lifeos",
+  "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "build:web": "expo export --platform web",
+    "check": "npm run typecheck && npm test",
+    "postinstall": "node scripts/patch-android-toolchain.mjs",
+    "preview": "node scripts/serve.mjs",
+    "build:android:bundle": "expo export --platform android --output-dir dist-android"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
+    "expo": "~55.0.0",
+    "expo-crypto": "~55.0.0",
+    "expo-font": "~55.0.0",
+    "expo-notifications": "~55.0.0",
+    "expo-router": "~55.0.0",
+    "expo-sqlite": "~55.0.0",
+    "expo-status-bar": "~55.0.0",
+    "expo-system-ui": "~55.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "^0.83.10",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "^0.21.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@playwright/cli": "^0.1.19",
+    "@types/react": "~19.2.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.2"
+  }
+}
