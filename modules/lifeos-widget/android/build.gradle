@@ -1,0 +1,10 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'com.personal.lifeos.widget'
+version = '1.0.0'
+android {
+  namespace 'com.personal.lifeos.widget'
+  defaultConfig { versionCode 1; versionName '1.0.0' }
+}

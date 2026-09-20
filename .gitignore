@@ -1,8 +1,10 @@
 node_modules/
 .expo/
 dist/
-android/
-ios/
+# Anchored: the generated prebuild output only. The widget module's own native
+# source lives under modules/lifeos-widget/android/ and must stay tracked.
+/android/
+/ios/
 .env
 *.log
 output/playwright/
@@ -10,4 +12,5 @@ dist-android/
 .playwright-cli/
 modules/**/build/
 modules/**/.gradle/
+modules/**/.kotlin/
 output/*.apk

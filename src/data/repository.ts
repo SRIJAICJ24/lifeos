@@ -6,15 +6,18 @@ export interface Database {
   getAllAsync<T>(sql: string, ...params: any[]): Promise<T[]>;
   withTransactionAsync(fn: () => Promise<void>): Promise<void>;
 }
+/** Ordered parents-first; `clear` walks it in reverse so children go first. */
 export const tables = [
   "subjects",
   "skills",
   "projects",
   "habits",
+  "periods",
+  "dayOrderSlots",
+  "courseSlots",
   "tasks",
   "blocks",
   "calendar",
-  "classes",
   "topics",
   "habitLogs",
   "sessions",
@@ -24,10 +27,39 @@ export const tables = [
   "workoutLogs",
   "bodyMetrics",
   "dependencies",
+  "classChanges",
+  "assignments",
+  "assessments",
+  "syllabusUnits",
+  "syllabusTopics",
+  "assessmentTopics",
+  "subjectTodos",
+  "announcements",
+  "attendance",
+  "studySessions",
+  "marks",
+  "materials",
+  "inbox",
 ] as const;
 export type Table = (typeof tables)[number];
 export class Repository {
   constructor(public db: Database) {}
+  private columnCache = new Map<string, Set<string>>();
+  /**
+   * Screens pass whole view models around (a subject title next to its id, say). Writing only
+   * the columns a table actually has keeps those presentation fields from reaching SQL.
+   */
+  private async columns(table: Table) {
+    let known = this.columnCache.get(table);
+    if (!known) {
+      const rows = await this.db.getAllAsync<{ name: string }>(
+        `PRAGMA table_info(${table})`,
+      );
+      known = new Set(rows.map((r) => r.name));
+      this.columnCache.set(table, known);
+    }
+    return known;
+  }
   async migrate() {
     await this.db.execAsync(
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY);",
@@ -48,9 +80,13 @@ export class Repository {
   }
   async upsert(table: Table, row: object) {
     if (!tables.includes(table)) throw new Error("Unknown table");
-    const entries = Object.entries(row).filter(([, v]) => v !== undefined);
+    const known = await this.columns(table);
+    const entries = Object.entries(row).filter(
+      ([k, v]) => v !== undefined && known.has(k),
+    );
     if (entries.some(([k]) => !/^[A-Za-z]+$/.test(k)))
       throw new Error("Invalid field");
+    if (!entries.length) throw new Error("Nothing to save.");
     const key = table === "calendar" ? "date" : "id";
     await this.db.runAsync(
       `INSERT INTO ${table} (${entries.map(([k]) => k).join(",")}) VALUES (${entries.map(() => "?").join(",")}) ON CONFLICT(${key}) DO UPDATE SET ${entries

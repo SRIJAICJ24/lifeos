@@ -1,5 +1,5 @@
 import { Data, Slot, Block } from "./types";
-import { dayOrder } from "./dayOrder";
+import { activeClasses, campusSpan, collegeFreePeriods } from "./timetable";
 export function freeTime(
   wake: number,
   sleep: number,
@@ -27,7 +27,6 @@ export function freeTime(
 }
 export function fixedBlocks(data: Data, date: string): Block[] {
   const s = data.settings,
-    order = dayOrder(date, data.calendar, s),
     result = data.blocks.filter(
       (b) => b.date === date && b.kind !== "session" && b.status !== "Skipped",
     );
@@ -37,32 +36,29 @@ export function fixedBlocks(data: Data, date: string): Block[] {
     start: number,
     end: number,
     kind = "routine",
-  ) =>
-    result.push({
-      id,
-      date,
-      title,
-      start,
-      end,
-      kind,
-      taskId: null,
-      status: "Scheduled",
-    });
-  if (order.order) {
-    add(
-      "college",
-      "College + commute",
-      Math.max(0, s.collegeStart - s.commute),
-      s.collegeEnd + s.commute,
-    );
-    for (const c of data.classes.filter((c) => c.dayOrder === order.order))
-      add(
-        c.id,
-        data.subjects.find((x) => x.id === c.subjectId)?.title ?? "Class",
-        c.start,
-        c.end,
-        "class",
-      );
+  ) => {
+    if (end > start)
+      result.push({
+        id,
+        date,
+        title,
+        start,
+        end,
+        kind,
+        taskId: null,
+        status: "Scheduled",
+      });
+  };
+  const classes = activeClasses(data, date);
+  for (const c of classes) add(c.key, c.title, c.start, c.end, "class");
+  const span = campusSpan(data, date);
+  if (span && classes.length) {
+    add("commute-in", "Commute", span.start, classes[0]!.start);
+    add("commute-out", "Commute", classes[classes.length - 1]!.end, span.end);
+    // Gaps between classes are real free time unless you would rather protect them.
+    if (s.freePeriods === "Off")
+      for (const gap of collegeFreePeriods(data, date))
+        add(`gap-${gap.start}`, "Between classes", gap.start, gap.end);
   }
   add("lunch", "Lunch", s.lunch, s.lunch + s.mealDuration);
   add("dinner", "Dinner", s.dinner, s.dinner + s.mealDuration);

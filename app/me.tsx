@@ -19,15 +19,7 @@ import { dateKey, clock, minutes, duration } from "../src/domain/time";
 import { exportBackup, importBackup } from "../src/services/backup";
 import { enableNotifications } from "../src/services/nativeIntegrations";
 import { TaskRow } from "../src/ui/TaskRow";
-const timeKeys = [
-  "wake",
-  "sleep",
-  "collegeStart",
-  "collegeEnd",
-  "lunch",
-  "dinner",
-  "workoutTime",
-];
+const timeKeys = ["wake", "sleep", "lunch", "dinner", "workoutTime"];
 export default function Me() {
   const { data, act } = useLife(),
     today = dateKey(),
@@ -41,8 +33,6 @@ export default function Me() {
   const settingsFields: Field[] = [
     { key: "wake", label: "Wake time · HH:mm" },
     { key: "sleep", label: "Sleep time · HH:mm" },
-    { key: "collegeStart", label: "College starts · HH:mm" },
-    { key: "collegeEnd", label: "College ends · HH:mm" },
     { key: "commute", label: "Commute each way · minutes", type: "number" },
     { key: "lunch", label: "Lunch time · HH:mm" },
     { key: "dinner", label: "Dinner time · HH:mm" },
@@ -75,6 +65,40 @@ export default function Me() {
       key: "weekends",
       label: "Non-academic weekdays · 0 Sun / 6 Sat (comma separated)",
     },
+    {
+      key: "freePeriods",
+      label: "Free periods between classes",
+      options: ["Off", "Study only", "Light tasks", "Any task"],
+    },
+    {
+      key: "attendanceThreshold",
+      label: "Attendance threshold · %",
+      type: "number",
+    },
+    { key: "studentName", label: "Your name" },
+    { key: "programme", label: "Programme" },
+    { key: "department", label: "Department" },
+    { key: "institution", label: "Institution" },
+    { key: "semester", label: "Semester", type: "number" },
+    { key: "section", label: "Section" },
+    { key: "batch", label: "Batch", type: "number" },
+    { key: "academicYear", label: "Academic year" },
+    {
+      key: "notifyClasses",
+      label: "Remind me before a class",
+      options: ["0", "1"],
+    },
+    {
+      key: "notifyClassLead",
+      label: "How many minutes before",
+      type: "number",
+    },
+    {
+      key: "notifyDayOrder",
+      label: "Tell me the Day Order each morning",
+      options: ["0", "1"],
+    },
+    { key: "notifyExams", label: "Remind me about exams", options: ["0", "1"] },
     { key: "calories", label: "Daily calorie target", type: "number" },
     { key: "protein", label: "Protein target · g", type: "number" },
     { key: "carbs", label: "Carbs target · g", type: "number" },
@@ -326,11 +350,31 @@ export default function Me() {
             </View>
           </Card>
           <Card>
+            <Text style={s.h2}>Semester setup</Text>
+            <Text style={s.muted}>
+              Puts the period times, the college slot grid, your registered
+              courses and their unit skeletons back the way they were verified.
+              It repairs the setup in place; your assignments, marks, attendance
+              and notes are untouched.
+            </Text>
+            <Button
+              title="Restore academic setup"
+              kind="secondary"
+              icon="refresh-cw"
+              onPress={() =>
+                void act(
+                  (e) => e.restoreAcademicSetup(),
+                  "Semester setup restored",
+                )
+              }
+            />
+          </Card>
+          <Card>
             <Text style={s.h2}>Start with a clean slate</Text>
             <Text style={s.muted}>
-              This removes all records, including demo data and anything you
-              have added. Your preferences stay. Export first if you want to
-              keep a copy.
+              This removes every record, including your subjects and timetable.
+              Your preferences stay, and you can restore the semester setup
+              afterwards. Export first if you want to keep a copy.
             </Text>
             <Button
               title={

@@ -1,29 +1,74 @@
 import { Data } from "../domain/types";
 import { dayOrder } from "../domain/dayOrder";
 import { availability } from "../domain/freeTime";
+import { activeClasses, nextClass } from "../domain/timetable";
+import { deadlines, displayName } from "../domain/academic";
+import { studySuggestions } from "../domain/study";
 import { habitStats } from "../domain/analytics";
 import { recommendations, actionable } from "../domain/priority";
-import { dateKey, nowMinute } from "../domain/time";
+import { addDays, dateKey, nowMinute } from "../domain/time";
+/** One payload feeding every home-screen widget; each widget reads the parts it needs. */
 export function widgetSnapshot(
   data: Data,
   date = dateKey(),
   minute = nowMinute(),
 ) {
   const order = dayOrder(date, data.calendar, data.settings);
-  const next = data.classes
-    .filter((c) => c.dayOrder === order.order && c.end > minute)
-    .sort((a, b) => a.start - b.start)[0];
+  const tomorrow = addDays(date, 1);
+  const tomorrowOrder = dayOrder(tomorrow, data.calendar, data.settings);
+  const classes = activeClasses(data, date);
+  const next = nextClass(data, date, minute);
   const free = availability(data, date, minute)[0];
+  const subject = (id: string | null) =>
+    displayName(data.subjects.find((s) => s.id === id));
+  const study = studySuggestions(
+    data,
+    date,
+    free ? free.end - free.start : 60,
+  )[0];
   return {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     date,
     dayOrder: order.order,
+    dayType: order.type,
+    tomorrow: { date: tomorrow, dayOrder: tomorrowOrder.order, type: tomorrowOrder.type },
     nextClass: next
       ? {
-          title: data.subjects.find((s) => s.id === next.subjectId)?.title,
+          title: next.title,
+          short: subject(next.subjectId),
           start: next.start,
           end: next.end,
+          room: next.room,
+          kind: next.kind,
+        }
+      : null,
+    classes: classes.map((c) => ({
+      short: subject(c.subjectId),
+      title: c.title,
+      start: c.start,
+      end: c.end,
+      room: c.room,
+      kind: c.kind,
+    })),
+    deadlines: deadlines(data, date)
+      .filter((d) => d.days <= 14)
+      .slice(0, 5)
+      .map((d) => ({
+        title: d.title,
+        subject: subject(d.subjectId),
+        kind: d.kind,
+        days: d.days,
+        date: d.date,
+        progress: Math.round(d.progress),
+      })),
+    study: study
+      ? {
+          title: study.title,
+          subject: subject(study.subjectId),
+          kind: study.kind,
+          minutes: study.minutes,
+          reason: study.reason,
         }
       : null,
     tasks: data.tasks

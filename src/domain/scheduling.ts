@@ -1,10 +1,24 @@
-import { Block, Data, Slot } from "./types";
+import { Block, Data, Slot, Task } from "./types";
 import { availability } from "./freeTime";
+import { collegeFreePeriods } from "./timetable";
 import { recommendations, remaining } from "./priority";
 import { addDays } from "./time";
 export const intensityRatio = { Relaxed: 0.6, Balanced: 0.75, Focused: 0.9 };
+/** What may be scheduled into a gap between classes, per the college free-period setting. */
+export function freePeriodFilter(data: Data, date: string) {
+  const gaps = collegeFreePeriods(data, date),
+    policy = data.settings.freePeriods;
+  return (task: Task, minute: number) => {
+    if (!gaps.some((g) => minute >= g.start && minute < g.end)) return true;
+    if (policy === "Any task") return true;
+    if (policy === "Light tasks")
+      return task.difficulty <= 2 && task.energyRequired <= 2;
+    return task.lifeArea === "academic";
+  };
+}
 export function schedule(data: Data, date: string, from = 0): Block[] {
   const slots = availability(data, date, from, false);
+  const allowed = freePeriodFilter(data, date);
   const pinned = data.blocks.filter(
     (b) =>
       b.date === date &&
@@ -47,7 +61,8 @@ export function schedule(data: Data, date: string, from = 0): Block[] {
       ).filter(
         (t) =>
           remaining(t) > (allocated.get(t.id) ?? 0) &&
-          (t.lifeArea !== "fitness" || cursor >= data.settings.workoutTime),
+          (t.lifeArea !== "fitness" || cursor >= data.settings.workoutTime) &&
+          allowed(t, cursor),
       );
       const task = candidates.find((t) => {
         const rem = remaining(t) - (allocated.get(t.id) ?? 0);

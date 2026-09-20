@@ -13,4 +13,20 @@ Decisions: use local calendar dates and minute intervals; persist normalized row
 
 ## Delivery status
 
-The MVP foundation, shared engine, navigation and seven life areas are implemented. Strict TypeScript and 38 tests pass; production web export and the standalone Android APK build succeeded. All seven area screens and four additional main screens passed browser navigation checks. See `docs/QA.md` for evidence and device acceptance steps. Phone widget/notification testing and live optional cloud integration remain outstanding; advanced features are listed in the README.
+The MVP foundation, shared engine, navigation and seven life areas are implemented. Strict
+TypeScript and 61 tests pass; production web export and the standalone Android APK build
+succeeded.
+
+The **Academic module** is built out as a student operating system on top of those engines: a
+slot-based timetable resolver (course → course slot → college Day Order grid → period → class),
+a working-day-aware academic calendar, assignments that separate work from submission,
+assessments with linked syllabus topics and revision planning, a syllabus tracker that keeps
+class coverage and personal study apart, hour-level attendance with forecasting, actionable
+announcements, a study recommender that explains itself, marks, materials, an inbox and search.
+Five Android home-screen widgets and four configurable notification types complete it.
+
+Everything outside Academic ships empty, as a fresh install: no sample tasks, habits, projects,
+workouts or meals. Only the verified semester setup is seeded.
+
+See `docs/ACADEMIC.md` for the verified model and `docs/QA.md` for evidence and the device
+acceptance steps that still require a phone.

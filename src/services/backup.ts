@@ -4,7 +4,7 @@ export function exportBackup(data: Data) {
   return JSON.stringify(
     {
       format: "lifeos",
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       data,
     },
@@ -14,12 +14,17 @@ export function exportBackup(data: Data) {
 }
 export async function importBackup(repo: Repository, text: string) {
   const parsed = JSON.parse(text);
-  if (parsed.format !== "lifeos" || parsed.version !== 1 || !parsed.data)
+  if (parsed.format !== "lifeos" || !parsed.data)
     throw new Error("This is not a supported LifeOS backup.");
+  if (![1, 2].includes(parsed.version))
+    throw new Error("This backup was written by a newer version of LifeOS.");
   const data = parsed.data;
+  // A version 1 backup predates the academic tables; those simply restore empty.
   for (const table of tables)
-    if (!Array.isArray(data[table]))
-      throw new Error(`Backup is missing ${table}.`);
+    if (!Array.isArray(data[table])) {
+      if (parsed.version === 1) data[table] = [];
+      else throw new Error(`Backup is missing ${table}.`);
+    }
   if (!data.settings || typeof data.settings.wake !== "number")
     throw new Error("Backup settings are missing.");
   await repo.db.withTransactionAsync(async () => {

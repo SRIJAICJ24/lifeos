@@ -23,7 +23,7 @@ Open **http://localhost:8081**. Keep this terminal running. The preview serves t
 
 ### Android
 
-The built [Android preview APK](output/lifeos-preview.apk) is available locally (about 38 MB, arm64). Transfer it to your phone to install. It uses a development signing key. See the [QA report](docs/QA.md) for verification and remaining device checks.
+The built [Android preview APK](output/lifeos-preview.apk) is available locally (about 38 MB, arm64). Transfer it to your phone to install. It uses a development signing key, so Android will ask you to allow installing from that source. See the [QA report](docs/QA.md) for verification and remaining device checks, and [native build notes](docs/NATIVE.md) for how to add the five home-screen widgets.
 
 ```powershell
 npm.cmd start
@@ -41,15 +41,22 @@ The script generates the Android project, builds a release-mode APK using the te
 
 ## First use
 
-1. Explore the labelled demo, or open **Me → Settings → Edit schedule & preferences**.
-2. Set your wake/sleep times, college hours, commute, meals, buffer and planning intensity.
-3. Set the academic rotation anchor date and its Day Order. Configure classes once under **Life → Academic → Timetable**.
-4. Use **Academic dates** for holidays, exam days, special timetables and manual overrides.
-5. Capture tasks, assignments, exams, events, habits or project ideas using **+**.
-6. Select **Plan my day** on Today. Calendar also supports planning a selected future day.
-7. Open a task to focus, log actual minutes, partially complete it, finish it or find another time.
+A new install already carries the verified semester: period times, the college slot grid, the
+eight registered courses with their slots, rooms and faculty, and an empty five-unit syllabus
+skeleton per subject. Nothing else is invented — no sample tasks, habits, projects or meals.
 
-Demo subjects, skills, projects, habits and workouts are editable. **Me → Your data** exports/restores JSON backups and has a two-step action to erase records and start fresh. Erasing records removes both demo and personal entries; it preserves preferences.
+1. Open **Me → Settings** and set your wake/sleep times, commute, meals, buffer and planning
+   intensity. Confirm the Day Order rotation anchor there too.
+2. Add the Academic Planner's holidays and exam dates under **Academic → Academic calendar**.
+   None were assumed; the rotation skips whatever you mark as non-working.
+3. Build out **Academic → Syllabus**: units are already there, add the topics you care about.
+4. Capture assignments, tests, todos, announcements, habits or project ideas using **+** or the
+   Academic quick actions.
+5. Select **Plan my day** on Today. Calendar also supports planning a selected future day.
+6. Open a task to focus, log actual minutes, partially complete it, finish it or find another time.
+
+**Me → Your data** exports/restores JSON backups, restores the semester setup on demand, and has
+a two-step action to erase records and start fresh. Erasing preserves your preferences.
 
 ## Implemented
 
@@ -61,16 +68,44 @@ Demo subjects, skills, projects, habits and workouts are editable. **Me → Your
 - Current-task and free-window recommendations; explicit rescheduling; missed-session history.
 - Plans recalculate after relevant data changes. Work reserved on another day is not allocated twice.
 - Durable focus timers, planned versus actual logs, completion and partial progress.
-- Academic subjects, attendance, syllabus topics, marks and linked work.
 - Skills with topics, notes, resources, question counts and linked practice tasks.
 - Projects and idea vault, stages, milestones, notes and linked tasks.
 - Habits with four tracking types, dated logs, streaks, consistency and 28-day history.
 - Workout plans, exercises, sets/reps/weights/rest, workout logs and body measurements.
 - Food logs supporting arbitrary foods and portions, macro targets, water and food history.
 - Weekly focus analytics, completion counts, habit consistency and weekly review.
-- Native contextual deadline digest with permission handling and at most one digest per day.
-- Persisted widget snapshots and a real Android AppWidget provider with a native Expo bridge.
+- Contextual local notifications: morning Day Order, a lead-time nudge before each class, the
+  deadline digest and exam reminders — each individually switchable.
+- Five Android home-screen widgets fed by one persisted snapshot through a native Expo bridge.
 - Optional Supabase email-code authentication and normalized backup transport/schema, isolated from local operation.
+
+### Academic
+
+A student operating system rather than a digital timetable. Full model in
+[docs/ACADEMIC.md](docs/ACADEMIC.md).
+
+- Slot architecture: course → course slot → college Day Order grid → period → resolved class.
+  The grid holds every college slot; only registered slots become classes, so an unregistered
+  slot is a genuine free period rather than someone else's lecture.
+- Academic calendar with nine day types, per-date Day Orders, event titles and manual overrides.
+  The rotation advances across working days only, so a holiday never consumes a Day Order.
+- Per-date class changes: cancelled, room changed, time changed, faculty changed, extra and
+  replacement classes — all of which feed straight back into free time.
+- Academic dashboard: Day Order, next class, today's classes, deadline radar, study suggestions,
+  a rule-based "needs attention" panel and progress at a glance.
+- Assignments that track work and submission separately, so "finished but not submitted" is
+  visible rather than silently counted as done.
+- Assessments for eleven exam types, with countdowns, linked syllabus topics, preparation
+  percentage and one-tap revision planning into real scheduled sessions.
+- Syllabus tracker down to subtopics, with six topic states and class coverage, personal study
+  and revision tracked as three separate figures.
+- Importance flags, weak-topic flags, PYQ counts and spaced-revision dates on every topic.
+- Attendance by hour with OD and cancellation handling, plus an exact threshold forecast.
+- Announcements that can carry an action — Day Order change, deadline move, class cancellation,
+  exam syllabus update — applied only on explicit confirmation.
+- "What should I study?" ranking deadlines, exam proximity, syllabus gaps, flagged topics and
+  time since revision, always with the reason it chose that.
+- Marks with configurable weightage, materials, an academic inbox and academic-wide search.
 
 ## Database and architecture
 
@@ -82,11 +117,23 @@ The store serializes mutations, loads the resulting rows, refreshes derived sche
 
 ### Day Order rules
 
-Weekdays rotate from the configured anchor. Non-academic weekdays are configurable. Holidays, exam days and non-academic exceptions do not advance the rotation. A manual academic override applies even on a weekend and restarts subsequent forward rotation from the specified order. Special timetable dates select one of the five configured timetables. Monday DO1 → Tuesday DO2 → Wednesday holiday → Thursday DO3 is covered by a regression test.
+Weekdays rotate from the configured anchor. Whether a date advances the rotation is decided by
+its `working` flag, not its label — which is what lets a special working Saturday take a Day
+Order while a weekday college event does not. Holidays, exam days and non-working exceptions
+pause the rotation rather than consuming an order. A manual override applies even on a weekend
+and the rotation continues forward from it. Monday DO1 → Tuesday DO2 → Wednesday holiday →
+Thursday DO3 is covered by a regression test, as are all five resolved Day Orders.
 
 ### Scheduling rules
 
-The engine subtracts college/commute, classes, meals, events and scheduled work from the waking window. Overlapping intervals are merged. It reserves only 60%, 75% or 90% of flexible capacity, applies buffers, ranks feasible tasks and splits long tasks into sessions. Workout tasks prefer the configured evening time. Past missed blocks are retained as history and stop reserving future work. Current focus sessions are protected.
+The engine subtracts the resolved classes, commute either side of the campus day, meals, events
+and scheduled work from the waking window. Overlapping intervals are merged. Gaps between
+classes are real free time: the **free periods** setting decides whether they are protected, or
+offered for study only, light tasks, or anything. A day with no classes has no college block at
+all. The engine reserves only 60%, 75% or 90% of flexible capacity, applies buffers, ranks
+feasible tasks and splits long tasks into sessions. Workout tasks prefer the configured evening
+time. Past missed blocks are retained as history and stop reserving future work. Current focus
+sessions are protected.
 
 Use **Calendar → Plan this day** to spread work over more days. The app does not silently build an entire semester plan. An indivisible task that cannot fit remains unscheduled.
 
@@ -107,7 +154,9 @@ Tests use Node's real SQLite engine for migrations, transactions, backup restore
 - Overnight waking windows are not supported: sleep must be later than wake within a local calendar day. Date-only deadlines mean the end of that day.
 - Short final task remainders can be shorter than the minimum session setting; long tasks avoid creating tiny tails where two valid sessions fit.
 - Native notifications and widgets require phone-level acceptance testing. Widgets consume the most recent app snapshot and display its timestamp; they do not run scheduling in the background.
-- One combined Android Today widget is implemented. Separate widget variants and iOS WidgetKit extensions are not implemented.
+- Five Android widgets are implemented (Today's classes, Next class, Deadlines, Study next, Day Order). iOS WidgetKit extensions are not.
+- The Academic Planner screenshots never reached the build session, so **no holidays are seeded** and the rotation anchor comes from a single worked example. Confirm both against the official planner. Unverified grid cells are flagged CHECK in the timetable editor.
+- Importing a timetable from an image, PDF or CSV is designed for but not built; entry is manual.
 - Supabase code is ready for explicit backups, not background conflict-resolving multi-device sync. No live cloud project was configured or tested. Store auth tokens in SecureStore before exposing cloud login in the app.
 - Web requires its local server to open/reload. Native SQLite is the offline phone implementation. Browser storage can be cleared by browser settings; export backups before uninstalling either version.
 - Data is local but the database is not application-level encrypted. Exported backups contain your personal records.

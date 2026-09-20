@@ -1,0 +1,7 @@
+<resources>
+  <string name="lifeos_widget_today">Every class today, in order, with rooms.</string>
+  <string name="lifeos_widget_next_class">What is next, when it starts and where.</string>
+  <string name="lifeos_widget_deadlines">Assignments and tests, nearest first.</string>
+  <string name="lifeos_widget_study">The best thing to study right now.</string>
+  <string name="lifeos_widget_day_order">Today and tomorrow, by Day Order.</string>
+</resources>

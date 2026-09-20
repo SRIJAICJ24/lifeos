@@ -16,6 +16,7 @@ import { colors, styles as s } from "../src/ui/theme";
 import { useLife } from "../src/state/store";
 import { dayOrder } from "../src/domain/dayOrder";
 import { availability } from "../src/domain/freeTime";
+import { nextClass } from "../src/domain/timetable";
 import { recommendations, actionable, priority } from "../src/domain/priority";
 import { dateKey, clock, duration } from "../src/domain/time";
 import { TaskRow } from "../src/ui/TaskRow";
@@ -38,9 +39,7 @@ export default function Today() {
   const plan = data.blocks
     .filter((b) => b.date === today && b.kind === "session")
     .sort((a, b) => a.start - b.start);
-  const next = data.classes
-    .filter((c) => c.dayOrder === order.order && c.end > minute)
-    .sort((a, b) => a.start - b.start)[0];
+  const next = nextClass(data, today, minute);
   const nextSubject = data.subjects.find((x) => x.id === next?.subjectId);
   const urgent = data.tasks
     .filter((t) => actionable(t) && t.deadline)
@@ -77,7 +76,8 @@ export default function Today() {
         <Card style={{ borderColor: "#586540", backgroundColor: "#20271C" }}>
           <Text style={s.h2}>Make this day your own.</Text>
           <Text style={s.muted}>
-            Start with editable demo data, or set your rhythm and begin fresh.
+            Your semester is already set up. Add your wake and sleep times, then
+            capture what you are carrying.
           </Text>
           <View style={s.wrap}>
             <Button
@@ -90,8 +90,18 @@ export default function Today() {
               }
             />
             <Button
-              title="Explore demo"
+              title="Open Academic"
               kind="secondary"
+              onPress={() =>
+                router.push({
+                  pathname: "/area/[area]",
+                  params: { area: "academic" },
+                })
+              }
+            />
+            <Button
+              title="Dismiss"
+              kind="quiet"
               onPress={() =>
                 void act(
                   (e) => e.repo.settings({ onboarded: 1 }),

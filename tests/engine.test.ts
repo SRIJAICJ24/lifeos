@@ -37,6 +37,9 @@ const holiday: CalendarDate = {
   type: "Holiday",
   dayOrder: null,
   note: "",
+  eventTitle: "",
+  working: 0,
+  source: "Test",
 };
 test("Monday DO1 Tuesday DO2, holiday Wednesday, Thursday DO3", () => {
   const d = fixture();
@@ -48,14 +51,20 @@ test("Monday DO1 Tuesday DO2, holiday Wednesday, Thursday DO3", () => {
 test("Manual override is authoritative and continues next academic day", () => {
   const d = fixture();
   d.calendar = [
-    { date: "2026-09-08", type: "Manual Override", dayOrder: 4, note: "" },
+    {
+      ...holiday,
+      date: "2026-09-08",
+      type: "Manual Override",
+      dayOrder: 4,
+      working: 1,
+    },
   ];
   assert.equal(dayOrder("2026-09-08", d.calendar, d.settings).order, 4);
   assert.equal(dayOrder("2026-09-09", d.calendar, d.settings).order, 5);
 });
 test("Exam and non-academic dates pause rotation", () => {
   const d = fixture();
-  for (const type of ["Exam Day", "Non-Academic Day"] as const) {
+  for (const type of ["Exam Day", "No Class", "College Event"] as const) {
     const entries = [{ ...holiday, type }];
     assert.equal(dayOrder("2026-09-09", entries, d.settings).order, null);
     assert.equal(dayOrder("2026-09-10", entries, d.settings).order, 3);
@@ -72,12 +81,32 @@ test("Special timetable maps to configured order", () => {
           date: "2026-09-12",
           type: "Special Timetable",
           dayOrder: 2,
+          working: 1,
         },
       ],
       d.settings,
     ).order,
     2,
   );
+});
+test("A special working Saturday advances the rotation; a weekday event does not", () => {
+  const d = fixture();
+  const saturday = {
+    ...holiday,
+    date: "2026-09-12",
+    type: "Special Working Day" as const,
+    working: 1,
+  };
+  // Mon DO1 … Fri DO5, working Saturday takes DO1, so Monday continues at DO2.
+  assert.equal(dayOrder("2026-09-12", [saturday], d.settings).order, 1);
+  assert.equal(dayOrder("2026-09-14", [saturday], d.settings).order, 2);
+  const event = {
+    ...holiday,
+    date: "2026-09-09",
+    type: "College Event" as const,
+  };
+  assert.equal(dayOrder("2026-09-09", [event], d.settings).order, null);
+  assert.equal(dayOrder("2026-09-10", [event], d.settings).order, 3);
 });
 test("Weekends pause and order wraps after 5", () => {
   const d = fixture();
@@ -307,10 +336,18 @@ test("Migrations and seed are idempotent; snapshot is derived", async () => {
   await seed(repo);
   await repo.migrate();
   const d = await engine.snapshot();
-  assert.equal(d.subjects.length, 5);
-  assert.equal(d.classes.length, 25);
-  assert.equal(d.projects.length, 3);
-  assert.ok(widgetSnapshot(d).tasks.length);
+  assert.equal(d.subjects.length, 8);
+  assert.equal(d.periods.length, 12);
+  assert.equal(d.courseSlots.length, 12);
+  assert.equal(d.syllabusUnits.length, 40);
+  // A fresh install carries the semester setup and nothing invented.
+  assert.equal(d.tasks.length, 0);
+  assert.equal(d.habits.length, 0);
+  assert.equal(d.projects.length, 0);
+  assert.equal(d.skills.length, 0);
+  assert.equal(d.meals.length, 0);
+  assert.equal(d.workouts.length, 0);
+  assert.equal(d.settings.demo, 0);
   db.close();
 });
 test("SQLite data survives closing and reopening real database file", async () => {
@@ -396,6 +433,15 @@ test("Deleting task cascades sessions and scheduled blocks", async () => {
 test("Habit task generation is idempotent", async () => {
   const { db, repo, engine } = await memory();
   await seed(repo);
+  await repo.upsert("habits", {
+    id: "h",
+    title: "Move your body",
+    type: "boolean",
+    target: 1,
+    unit: "done",
+    duration: 30,
+    startDate: dateKey(),
+  });
   await engine.ensureHabits(dateKey());
   const count = (await repo.read()).tasks.length;
   await engine.ensureHabits(dateKey());
@@ -423,17 +469,21 @@ test("Habit logs upsert same day and expose consistency beyond streak", async ()
   db.close();
 });
 test("Backup round trip and corrupt restore rollback", async () => {
-  const { db, repo } = await memory();
+  const { db, repo, engine } = await memory();
   await seed(repo);
+  await engine.save("tasks", {
+    ...newTask("Revise", "academic", "t"),
+    subjectId: "cn",
+  });
   const backup = exportBackup(await repo.read());
   await repo.clear();
   assert.equal((await repo.read()).tasks.length, 0);
   await importBackup(repo, backup);
-  assert.equal((await repo.read()).subjects.length, 5);
+  assert.equal((await repo.read()).subjects.length, 8);
   const corrupt = JSON.parse(backup);
   corrupt.data.tasks[0].subjectId = "missing";
   await assert.rejects(() => importBackup(repo, JSON.stringify(corrupt)));
-  assert.equal((await repo.read()).subjects.length, 5);
+  assert.equal((await repo.read()).subjects.length, 8);
   db.close();
 });
 test("Empty database and analytics are safe", async () => {

@@ -1,6 +1,7 @@
 import { Repository } from "./repository";
 import { Task, defaultSettings } from "../domain/types";
-import { addDays, dateKey } from "../domain/time";
+import { courses, grid, periodTimes, student } from "./academicData";
+import { clock } from "../domain/time";
 export const newTask = (
   title: string,
   lifeArea: Task["lifeArea"] = "personal",
@@ -34,210 +35,85 @@ export const newTask = (
   recurrence: "",
   parentId: null,
 });
+/**
+ * Writes the verified semester setup: period times, the college slot grid, registered courses
+ * and their slots, and an empty five-unit syllabus skeleton. Keyed by stable ids, so running it
+ * again repairs the setup rather than duplicating it. Personal records are never touched.
+ */
+export async function seedAcademic(repo: Repository) {
+  await repo.db.withTransactionAsync(async () => {
+    for (const [position, start, end] of periodTimes)
+      await repo.upsert("periods", {
+        id: `period-${position}`,
+        position,
+        label: `${clock(start)}–${clock(end)}`,
+        start,
+        end,
+      });
+    for (const [dayOrder, position, slotCode, verified] of grid)
+      await repo.upsert("dayOrderSlots", {
+        id: `grid-${dayOrder}-${position}`,
+        dayOrder,
+        position,
+        slotCode,
+        verified,
+      });
+    for (const course of courses) {
+      await repo.upsert("subjects", {
+        id: course.id,
+        title: course.title,
+        code: course.code,
+        shortName: course.shortName,
+        credits: course.credits,
+        category: course.category,
+        courseType: course.courseType,
+        facultyName: course.facultyName,
+        facultyContact: "",
+        colour: course.colour,
+        semester: student.semester,
+        academicYear: student.academicYear,
+        active: 1,
+        notes: "",
+      });
+      for (const [slotCode, kind, room] of course.slots)
+        await repo.upsert("courseSlots", {
+          id: `slot-${course.id}-${slotCode}`,
+          subjectId: course.id,
+          slotCode,
+          kind,
+          room,
+        });
+      for (let unit = 1; unit <= 5; unit++)
+        await repo.upsert("syllabusUnits", {
+          id: `unit-${course.id}-${unit}`,
+          subjectId: course.id,
+          position: unit,
+          title: `Unit ${unit}`,
+          description: "",
+          covered: 0,
+        });
+    }
+  });
+}
 export async function seed(repo: Repository) {
   const flag = await repo.db.getAllAsync(
     "SELECT key FROM settings WHERE key=?",
-    "demo",
+    "seeded",
   );
   if (flag.length) return;
-  const today = dateKey();
-  await repo.db.withTransactionAsync(async () => {
-    await repo.settings({ ...defaultSettings, anchorDate: today });
-    for (const [i, title] of [
-      "Computer Networks",
-      "Discrete Mathematics",
-      "Machine Learning",
-      "Entrepreneurial Finance",
-      "FLAT",
-    ].entries()) {
-      await repo.upsert("subjects", {
-        id: `subject-${i}`,
-        title,
-        code: ["CN", "DM", "ML", "EF", "FLAT"][i],
-        attended: 0,
-        total: 0,
-        marks: "",
-        notes: "",
-      });
-      for (const [j, topic] of (i === 0
-        ? ["Network models", "IPv4 addressing", "Subnetting", "Routing"]
-        : ["Foundations", "Core concepts", "Practice problems"]
-      ).entries())
-        await repo.upsert("topics", {
-          id: `topic-${i}-${j}`,
-          ownerId: `subject-${i}`,
-          ownerType: "subject",
-          title: topic,
-          done: j === 0 ? 1 : 0,
-        });
-    }
-    for (let dayOrder = 1; dayOrder <= 5; dayOrder++)
-      for (let i = 0; i < 5; i++)
-        await repo.upsert("classes", {
-          id: `class-${dayOrder}-${i}`,
-          dayOrder,
-          subjectId: `subject-${(i + dayOrder - 1) % 5}`,
-          start: 460 + i * 60,
-          end: 510 + i * 60,
-          room: `B-${201 + i}`,
-        });
-    for (const [i, title] of ["DSA", "Python", "Java", "AI"].entries()) {
-      await repo.upsert("skills", {
-        id: `skill-${i}`,
-        title,
-        notes: "",
-        resource: "",
-        questions: 0,
-        nextRevision: addDays(today, 3),
-      });
-      for (const [j, t] of [
-        "Foundations",
-        "Practice",
-        "Build something",
-      ].entries())
-        await repo.upsert("topics", {
-          id: `skill-topic-${i}-${j}`,
-          ownerId: `skill-${i}`,
-          ownerType: "skill",
-          title: t,
-          done: j === 0 ? 1 : 0,
-        });
-    }
-    for (const [i, title] of ["VoxCode", "AgentGuard", "LifeOS"].entries()) {
-      await repo.upsert("projects", {
-        id: `project-${i}`,
-        title,
-        description: [
-          "A workspace for ideas and voice.",
-          "Safer tools for autonomous agents.",
-          "Make room for what matters.",
-        ][i],
-        status: i === 1 ? "Research" : "Building",
-        targetDate: addDays(today, 30 + i * 10),
-        link: "",
-        notes: "",
-      });
-      for (const [j, t] of [
-        "Research",
-        "Design",
-        "Development",
-        "Testing",
-        "Launch",
-      ].entries())
-        await repo.upsert("topics", {
-          id: `project-topic-${i}-${j}`,
-          ownerId: `project-${i}`,
-          ownerType: "project",
-          title: t,
-          done: j < 2 ? 1 : 0,
-        });
-    }
-    const habits = [
-      {
-        title: "DSA practice",
-        type: "duration",
-        target: 30,
-        unit: "min",
-        duration: 30,
-      },
-      {
-        title: "Move your body",
-        type: "boolean",
-        target: 1,
-        unit: "done",
-        duration: 40,
-      },
-      {
-        title: "Read a little",
-        type: "quantity",
-        target: 20,
-        unit: "pages",
-        duration: 20,
-      },
-      {
-        title: "Stay hydrated",
-        type: "counter",
-        target: 8,
-        unit: "glasses",
-        duration: 0,
-      },
-    ];
-    for (const [i, h] of habits.entries())
-      await repo.upsert("habits", { id: `habit-${i}`, ...h, startDate: today });
-    const tasks: Task[] = [
-      {
-        ...newTask("Discrete Maths assignment", "academic", "task-assignment"),
-        subjectId: "subject-1",
-        subcategory: "Assignment",
-        deadline: addDays(today, 1),
-        estimatedDuration: 90,
-        priority: 3,
-        minimumSessionLength: 30,
-        description: "Complete questions 1–6 on relations and partial orders.",
-      },
-      {
-        ...newTask("Practice sliding window", "skills", "task-dsa"),
-        skillId: "skill-0",
-        estimatedDuration: 30,
-        habitId: "habit-0",
-      },
-      {
-        ...newTask("Build the capture flow", "projects", "task-project"),
-        projectId: "project-0",
-        estimatedDuration: 45,
-        priority: 1,
-      },
-      {
-        ...newTask("Push day workout", "fitness", "task-workout"),
-        estimatedDuration: 40,
-        splittable: 0,
-        habitId: "habit-1",
-      },
-      {
-        ...newTask("Revise Computer Networks", "academic", "task-revise"),
-        subjectId: "subject-0",
-        estimatedDuration: 60,
-        deadline: addDays(today, 4),
-      },
-      {
-        ...newTask("Computer Networks exam", "academic", "task-exam"),
-        subjectId: "subject-0",
-        subcategory: "Exam",
-        deadline: addDays(today, 4),
-        estimatedDuration: 120,
-        fixed: 1,
-      },
-    ];
-    for (const task of tasks) await repo.upsert("tasks", task);
-    await repo.upsert("blocks", {
-      id: "exam-event",
-      date: addDays(today, 4),
-      start: 600,
-      end: 720,
-      title: "Computer Networks exam",
-      kind: "exam",
-      taskId: "task-exam",
-      status: "Scheduled",
-    });
-    await repo.upsert("workouts", {
-      id: "workout-push",
-      title: "Push day",
-      duration: 40,
-      weekday: new Date().getDay(),
-    });
-    for (const [i, title] of [
-      "Dumbbell bench press",
-      "Shoulder press",
-      "Triceps extension",
-    ].entries())
-      await repo.upsert("exercises", {
-        id: `exercise-${i}`,
-        workoutId: "workout-push",
-        title,
-        sets: 3,
-        reps: 12,
-        weight: 10 - i * 2,
-        rest: 90,
-      });
+  await repo.settings({
+    ...defaultSettings,
+    studentName: student.studentName,
+    programme: student.programme,
+    department: student.department,
+    institution: student.institution,
+    semester: student.semester,
+    section: student.section,
+    batch: student.batch,
+    academicYear: student.academicYear,
+    anchorDate: student.anchorDate,
+    anchorOrder: student.anchorOrder,
   });
+  await seedAcademic(repo);
+  await repo.db.runAsync("INSERT INTO settings VALUES (?,?)", "seeded", "1");
 }

@@ -208,6 +208,115 @@ export function Choices({
     </View>
   );
 }
+/** A horizontally scrolling chip bar — for section lists too long to wrap tidily. */
+export function Segmented({
+  values,
+  value,
+  onChange,
+}: {
+  values: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 7, paddingRight: 8 }}
+    >
+      {values.map((v) => (
+        <Pressable
+          key={v}
+          accessibilityRole="button"
+          accessibilityLabel={v}
+          accessibilityState={{ selected: v === value }}
+          onPress={() => onChange(v)}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 10,
+            backgroundColor: value === v ? colors.accent : colors.raised,
+          }}
+        >
+          <Text
+            style={{
+              color: value === v ? colors.bg : colors.muted,
+              fontSize: 12,
+              fontWeight: "600",
+            }}
+          >
+            {v}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+export const Stat = ({
+  label,
+  value,
+  hint,
+  color = colors.text,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  color?: string;
+}) => (
+  <View style={{ flexGrow: 1, flexBasis: 96, gap: 4 }}>
+    <Text style={s.label}>{label.toUpperCase()}</Text>
+    <Text style={{ color, fontSize: 21, fontWeight: "700", letterSpacing: -0.5 }}>
+      {value}
+    </Text>
+    {hint ? <Text style={[s.muted, { fontSize: 11 }]}>{hint}</Text> : null}
+  </View>
+);
+export function ListRow({
+  title,
+  subtitle,
+  right,
+  onPress,
+  colour,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+  onPress?: () => void;
+  colour?: string;
+}) {
+  const body = (
+    <View style={[s.row, { justifyContent: "space-between", gap: 10 }]}>
+      {colour ? (
+        <View
+          style={{
+            width: 3,
+            alignSelf: "stretch",
+            minHeight: 30,
+            borderRadius: 2,
+            backgroundColor: colour,
+          }}
+        />
+      ) : null}
+      <View style={s.grow}>
+        <Text style={s.text}>{title}</Text>
+        {subtitle ? <Text style={s.muted}>{subtitle}</Text> : null}
+      </View>
+      {right}
+    </View>
+  );
+  return onPress ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingVertical: 2 })}
+    >
+      {body}
+    </Pressable>
+  ) : (
+    body
+  );
+}
 export interface Field {
   key: string;
   label: string;
@@ -222,6 +331,8 @@ export function Editor({
   onSave,
   onClose,
   onDelete,
+  saveLabel = "Save",
+  children,
 }: {
   title: string;
   fields: Field[];
@@ -229,6 +340,8 @@ export function Editor({
   onSave: (values: Record<string, string>) => Promise<boolean>;
   onClose: () => void;
   onDelete?: () => Promise<boolean>;
+  saveLabel?: string;
+  children?: React.ReactNode;
 }) {
   const [values, setValues] = useState<Record<string, string>>(
     Object.fromEntries(
@@ -302,13 +415,14 @@ export function Editor({
                 )}
               </View>
             ))}
+            {children}
             {error && (
               <Text accessibilityRole="alert" style={{ color: "#FFB4B4" }}>
                 {error}
               </Text>
             )}
             <Button
-              title={busy ? "Saving…" : "Save"}
+              title={busy ? "Saving…" : saveLabel}
               disabled={busy}
               onPress={() =>
                 void onSave(values).then((ok) => {

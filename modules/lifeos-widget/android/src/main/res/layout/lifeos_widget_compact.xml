@@ -1,0 +1,5 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/lifeos_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/lifeos_widget_background">
+ <TextView android:id="@+id/lifeos_widget_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="TODAY" android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.12" android:textColor="#D0EE88" android:maxLines="1"/>
+ <TextView android:id="@+id/lifeos_widget_big" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="—" android:textColor="#F3F3F0" android:textSize="34sp" android:textStyle="bold" android:maxLines="1"/>
+ <TextView android:id="@+id/lifeos_widget_sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Open LifeOS" android:textColor="#B2B6BA" android:textSize="12sp" android:maxLines="2" android:ellipsize="end"/>
+</LinearLayout>

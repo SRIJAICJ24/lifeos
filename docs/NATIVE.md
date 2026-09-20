@@ -11,18 +11,39 @@ Run `scripts/build-android.ps1` from the README. Its JDK argument is optional wh
 
 The reproducible postinstall patch updates React Native 0.83's bundled Foojay resolver from 0.5.0 to 1.0.0 for Gradle 9 compatibility. This matches the [upstream React Native issue](https://github.com/react/react-native/issues/55781) and [resolver changelog](https://github.com/gradle/foojay-toolchains/blob/main/CHANGELOG.md). Remove the patch when upgrading to a React Native release that carries the fix.
 
-## Widget
+## Widgets
 
-The source is `modules/lifeos-widget/android/`. Expo autolinking discovers the module automatically during prebuild. Its Android library manifest contributes the real widget receiver and metadata.
+The source is `modules/lifeos-widget/android/`. Expo autolinking discovers the module during
+prebuild, and its library manifest contributes five real `AppWidgetProvider` receivers.
 
-1. Install the native APK and open LifeOS once.
-2. Generate a plan or save an entry to update the snapshot.
-3. Long-press the Android launcher → Widgets → **LifeOS · Today**.
-4. Place and resize the widget. It shows the next class/day order, pending tasks and next free slot from the latest snapshot.
-5. Tap it to open LifeOS. Complete a task and confirm the widget changes.
-6. Test force-stop/reopen, a date rollover and adding a widget before any snapshot exists.
+| Widget | Default size | Shows | Opens |
+|---|---|---|---|
+| LifeOS · Today's classes | 4×3 | Every class today with times and rooms | Academic |
+| LifeOS · Next class | 4×2 | What is next, when and where | Academic |
+| LifeOS · Deadlines | 4×3 | Assignments and tests, nearest first | Assignments |
+| LifeOS · Study next | 4×2 | The top study suggestion and its reason | Study plan |
+| LifeOS · Day Order | 2×2 | Today's and tomorrow's Day Order | Academic calendar |
 
-The provider is real `AppWidgetProvider` / `RemoteViews`, backed by private SharedPreferences written by an Expo module. It is not an in-app imitation. It deliberately reports snapshot age rather than claiming to recalculate while the app is closed. Seven specialized widget layouts and iOS WidgetKit remain future work.
+All five are resizable, and all five read the same snapshot, so they always agree with each other.
+
+### Adding them on the phone
+
+1. Install the APK and open LifeOS once — the snapshot is written on first load and after every
+   change, so a widget added before that shows "Open LifeOS to refresh".
+2. Long-press an empty spot on the home screen → **Widgets**.
+3. Scroll to **LifeOS**. All five appear under it with a one-line description each.
+4. Long-press one and drag it out, or tap it to place it. Drag the handles to resize.
+5. Tap the widget to open the matching screen in the app.
+
+On Motorola's launcher (Moto Edge 50 Fusion) this is Home screen → long-press → Widgets → LifeOS.
+The widget picker groups them under the app name; if only some appear, scroll — the group is
+collapsible and shows a count.
+
+The providers are real `AppWidgetProvider` / `RemoteViews`, backed by private SharedPreferences
+written by an Expo module. They are not in-app imitations. They deliberately report snapshot age
+rather than claiming to recalculate while the app is closed: Android refreshes them on its own
+schedule (30 minutes) and immediately whenever the app writes a change. iOS WidgetKit remains
+future work.
 
 ## Device acceptance checks
 
