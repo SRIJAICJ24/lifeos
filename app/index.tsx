@@ -18,9 +18,10 @@ import { dayOrder } from "../src/domain/dayOrder";
 import { availability } from "../src/domain/freeTime";
 import { nextClass } from "../src/domain/timetable";
 import { recommendations, actionable, priority } from "../src/domain/priority";
-import { dateKey, clock, duration } from "../src/domain/time";
+import { dateKey, clock, duration, addDays } from "../src/domain/time";
 import { TaskRow } from "../src/ui/TaskRow";
 import { habitStats } from "../src/domain/analytics";
+
 export default function Today() {
   const { data, minute, act, busy } = useLife(),
     router = useRouter(),
@@ -54,6 +55,36 @@ export default function Today() {
     ? recommendations(data, today, current.end - minute)
     : [];
   const complete = plan.filter((b) => b.status === "Completed").length;
+
+  const nextBlock = plan.find(
+    (b) => b.start > minute && b.status === "Scheduled",
+  );
+  const nextBlockTask = data.tasks.find((t) => t.id === nextBlock?.taskId);
+
+  const tomorrow = addDays(today, 1);
+  const tomorrowOrder = useMemo(
+    () => dayOrder(tomorrow, data.calendar, data.settings),
+    [data, tomorrow],
+  );
+  const tomorrowTasks = data.tasks.filter(
+    (t) => actionable(t) && t.deadline === tomorrow,
+  );
+  const tomorrowBlocks = data.blocks
+    .filter((b) => b.date === tomorrow && b.kind === "session")
+    .sort((a, b) => a.start - b.start);
+
+  const remainingByArea = useMemo(() => {
+    const active = data.tasks.filter(actionable);
+    return {
+      academic: active.filter((t) => t.lifeArea === "academic").length,
+      skills: active.filter((t) => t.lifeArea === "skills").length,
+      projects: active.filter((t) => t.lifeArea === "projects").length,
+      fitness: active.filter((t) => t.lifeArea === "fitness").length,
+      habits: active.filter((t) => t.lifeArea === "habits").length,
+      total: active.length,
+    };
+  }, [data.tasks]);
+
   return (
     <Shell>
       <Heading
@@ -140,7 +171,7 @@ export default function Today() {
             A plan that fits your life.
           </Text>
           <Text style={{ color: "#4C5D32", fontSize: 14, lineHeight: 22 }}>
-            You have {duration(total)} open ahead. Let’s find a good place to
+            You have {duration(total)} open ahead. Let's find a good place to
             start.
           </Text>
           <Button
@@ -182,19 +213,44 @@ export default function Today() {
           />
         </Card>
       </View>
+
+      {nextBlockTask && (
+        <Card
+          style={{
+            borderLeftColor: colors.accent,
+            borderLeftWidth: 4,
+          }}
+        >
+          <View style={[s.row, { justifyContent: "space-between" }]}>
+            <View style={[s.row, { gap: 8 }]}>
+              <Icon name="clock" color={colors.accent} />
+              <Text style={s.label}>NEXT UP</Text>
+            </View>
+            <Tag
+              text={`AT ${clock(nextBlock!.start)}`}
+              color={colors.accent}
+            />
+          </View>
+          <TaskRow
+            task={nextBlockTask}
+            time={`${clock(nextBlock!.start)} – ${clock(nextBlock!.end)}`}
+          />
+        </Card>
+      )}
+
       {showNow && (
         <Card>
           <Text style={s.h2}>
             {current
               ? `You have ${duration(current.end - minute)} right now.`
-              : "You’re in a planned activity."}
+              : "You're in a planned activity."}
           </Text>
           <Text style={s.muted}>
             {current
               ? "Ranked by urgency, importance, remaining work and fit."
               : free[0]
                 ? `Your next opening starts at ${clock(free[0].start)}. Open Free Time to plan ahead.`
-                : "There are no free windows left today. It’s okay to leave work for tomorrow."}
+                : "There are no free windows left today. It's okay to leave work for tomorrow."}
           </Text>
           {choices.slice(0, 3).map((t, i) => (
             <View key={t.id}>
@@ -215,7 +271,7 @@ export default function Today() {
           <Card>
             <View style={[s.row, { justifyContent: "space-between" }]}>
               <Text style={s.h2}>
-                Today’s plan <Text style={s.muted}> / {plan.length}</Text>
+                Today's plan <Text style={s.muted}> / {plan.length}</Text>
               </Text>
               <Button
                 title={busy ? "Planning…" : "Plan my day"}
@@ -283,6 +339,80 @@ export default function Today() {
         <View style={s.column}>
           <Card>
             <View style={[s.row, { justifyContent: "space-between" }]}>
+              <Text style={s.h2}>Task overview</Text>
+              <Icon name="layers" color={colors.accent} />
+            </View>
+            <View style={{ gap: 10 }}>
+              {[
+                {
+                  label: "Academic",
+                  count: remainingByArea.academic,
+                  color: colors.academic,
+                },
+                {
+                  label: "Skills",
+                  count: remainingByArea.skills,
+                  color: colors.skills,
+                },
+                {
+                  label: "Projects",
+                  count: remainingByArea.projects,
+                  color: colors.projects,
+                },
+                {
+                  label: "Fitness",
+                  count: remainingByArea.fitness,
+                  color: colors.fitness,
+                },
+                {
+                  label: "Habits",
+                  count: remainingByArea.habits,
+                  color: colors.habits,
+                },
+              ]
+                .filter((a) => a.count > 0)
+                .map((a) => (
+                  <View
+                    key={a.label}
+                    style={[s.row, { justifyContent: "space-between" }]}
+                  >
+                    <View style={[s.row, { gap: 8 }]}>
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: a.color,
+                        }}
+                      />
+                      <Text style={s.text}>{a.label}</Text>
+                    </View>
+                    <Text
+                      style={{ color: a.color, fontWeight: "700", fontSize: 15 }}
+                    >
+                      {a.count}
+                    </Text>
+                  </View>
+                ))}
+              {remainingByArea.total === 0 && (
+                <Text style={s.muted}>All clear. Nothing pending.</Text>
+              )}
+            </View>
+            <View style={[s.row, { justifyContent: "space-between" }]}>
+              <Text style={s.muted}>Total open</Text>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontWeight: "700",
+                  fontSize: 18,
+                }}
+              >
+                {remainingByArea.total}
+              </Text>
+            </View>
+          </Card>
+          <Card>
+            <View style={[s.row, { justifyContent: "space-between" }]}>
               <Text style={s.h2}>Room to breathe</Text>
               <Icon name="wind" color={colors.personal} />
             </View>
@@ -335,17 +465,35 @@ export default function Today() {
             </View>
             {data.habits.slice(0, 3).map((h) => {
               const stat = habitStats(h, data, today);
+              const done = stat.value >= h.target;
               return (
                 <View key={h.id} style={{ gap: 10 }}>
                   <View style={[s.row, { justifyContent: "space-between" }]}>
-                    <Text style={s.text}>{h.title}</Text>
+                    <View style={[s.row, { gap: 8 }]}>
+                      {done && (
+                        <Text style={{ color: colors.accent, fontSize: 14 }}>
+                          ✓
+                        </Text>
+                      )}
+                      <Text
+                        style={[
+                          s.text,
+                          done && {
+                            textDecorationLine: "line-through",
+                            color: colors.muted,
+                          },
+                        ]}
+                      >
+                        {h.title}
+                      </Text>
+                    </View>
                     <Text style={s.muted}>
                       {stat.value}/{h.target}
                     </Text>
                   </View>
                   <Progress
                     value={(stat.value / h.target) * 100}
-                    color={colors.habits}
+                    color={done ? colors.accent : colors.habits}
                   />
                 </View>
               );
@@ -356,6 +504,40 @@ export default function Today() {
               onPress={() => router.push("/area/habits")}
             />
           </Card>
+          {(tomorrowTasks.length > 0 || tomorrowBlocks.length > 0) && (
+            <Card>
+              <View style={[s.row, { justifyContent: "space-between" }]}>
+                <Text style={s.h2}>Tomorrow</Text>
+                <Tag
+                  text={
+                    tomorrowOrder.order
+                      ? `DO${tomorrowOrder.order}`
+                      : tomorrowOrder.type.toUpperCase().slice(0, 10)
+                  }
+                  color={colors.academic}
+                />
+              </View>
+              {tomorrowTasks.slice(0, 3).map((t) => (
+                <TaskRow key={t.id} task={t} time="Due tomorrow" />
+              ))}
+              {tomorrowBlocks.slice(0, 3).map((b) => {
+                const t = data.tasks.find((t) => t.id === b.taskId);
+                return t ? (
+                  <TaskRow
+                    key={b.id}
+                    task={t}
+                    time={`${clock(b.start)} – ${clock(b.end)}`}
+                  />
+                ) : null;
+              })}
+              <Button
+                title="Plan tomorrow"
+                kind="quiet"
+                icon="arrow-right"
+                onPress={() => router.push("/calendar")}
+              />
+            </Card>
+          )}
         </View>
       </View>
     </Shell>

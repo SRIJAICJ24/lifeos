@@ -99,6 +99,8 @@ export default function Me() {
       options: ["0", "1"],
     },
     { key: "notifyExams", label: "Remind me about exams", options: ["0", "1"] },
+    { key: "notifyTasks", label: "Remind me before scheduled tasks", options: ["0", "1"] },
+    { key: "notifyWeekly", label: "Sunday weekly review notification", options: ["0", "1"] },
     { key: "calories", label: "Daily calorie target", type: "number" },
     { key: "protein", label: "Protein target · g", type: "number" },
     { key: "carbs", label: "Carbs target · g", type: "number" },

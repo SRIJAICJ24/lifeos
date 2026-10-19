@@ -515,6 +515,8 @@ export interface Settings {
   notifyDayOrder: number;
   notifyClasses: number;
   notifyExams: number;
+  notifyTasks: number;
+  notifyWeekly: number;
 }
 export interface Data {
   tasks: Task[];
@@ -594,6 +596,8 @@ export const defaultSettings: Settings = {
   notifyDayOrder: 1,
   notifyClasses: 1,
   notifyExams: 1,
+  notifyTasks: 1,
+  notifyWeekly: 1,
 };
 export const emptyData = (): Data => ({
   tasks: [],

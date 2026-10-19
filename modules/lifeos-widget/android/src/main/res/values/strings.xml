@@ -4,4 +4,5 @@
   <string name="lifeos_widget_deadlines">Assignments and tests, nearest first.</string>
   <string name="lifeos_widget_study">The best thing to study right now.</string>
   <string name="lifeos_widget_day_order">Today and tomorrow, by Day Order.</string>
+  <string name="lifeos_widget_overview">Your life at a glance: tasks, projects, habits, next up.</string>
 </resources>

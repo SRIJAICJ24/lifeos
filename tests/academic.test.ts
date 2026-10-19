@@ -660,6 +660,13 @@ test("The widget snapshot carries today's real academic picture", async () => {
   assert.equal(snap.deadlines[0]?.title, "GPU assignment 2");
   assert.equal(snap.deadlines[0]?.days, 1);
   assert.ok(snap.tomorrow.date === addDays(today, 1));
+  assert.ok(snap.remainingByArea);
+  assert.equal(typeof snap.remainingByArea.academic, "number");
+  assert.equal(typeof snap.remainingByArea.total, "number");
+  assert.ok(snap.habitSummary);
+  assert.equal(snap.habitSummary.total, 0);
+  assert.ok(Array.isArray(snap.projectProgress));
+  assert.ok(snap.reminders);
   db.close();
 });
 test("An announcement applies its change only when asked", async () => {

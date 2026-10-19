@@ -20,5 +20,9 @@
       <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
       <meta-data android:name="android.appwidget.provider" android:resource="@xml/lifeos_widget_day_order"/>
     </receiver>
+    <receiver android:name=".LifeOSOverviewWidget" android:exported="false" android:label="LifeOS · Life Overview">
+      <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/lifeos_widget_overview"/>
+    </receiver>
   </application>
 </manifest>

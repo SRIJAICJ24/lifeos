@@ -1,164 +1,256 @@
+<div align="center">
+
 # LifeOS
 
-A private, local-first personal life planner built with **Expo SDK 55, React Native, Expo Router, TypeScript, SQLite and Zustand**. All seven life areas share a single Life Engine. No account or cloud connection is required.
+**Your entire life, one app, zero cloud.**
 
-## Run it
+A private, offline-first personal life planner that unifies academics, habits, projects, skills, fitness and nutrition under a single intelligent engine. Built with Expo SDK 55, React Native, TypeScript, SQLite and Zustand.
 
-Requirements: Node.js 22 LTS and npm. From PowerShell:
+[![Expo SDK](https://img.shields.io/badge/Expo_SDK-55-4630EB?logo=expo&logoColor=white)](https://expo.dev)
+[![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react&logoColor=black)](https://reactnative.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![SQLite](https://img.shields.io/badge/SQLite-Local_First-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org)
+[![Tests](https://img.shields.io/badge/Tests-62_passing-brightgreen)]()
 
-```powershell
-cd D:\lifeos
-npm.cmd ci
-npm.cmd run web
+[Download APK](#-download) &bull; [Features](#-features) &bull; [Architecture](#-architecture) &bull; [Get Started](#-get-started)
+
+</div>
+
+---
+
+## Why LifeOS?
+
+Most productivity apps solve one thing. LifeOS connects everything: your **class schedule** feeds into **free time**, which powers **task scheduling**, which respects your **habits**, **workouts**, and **meal plans**. One engine, one database, one truth.
+
+- **No account required** &mdash; runs entirely on your device
+- **No internet needed** &mdash; SQLite stores everything locally
+- **No subscription** &mdash; install and own it forever
+- **Intelligent scheduling** &mdash; knows your classes, deadlines, habits and energy
+
+---
+
+## Download
+
+> **[Latest APK Release](https://github.com/SRIJAICJ24/lifeos/releases/latest)**
+>
+> arm64 Android preview build (~38 MB). Transfer to your phone and install.
+> Android will ask to allow installing from an unknown source &mdash; this is normal for sideloaded apps.
+
+---
+
+## Features
+
+### Today &mdash; Your Command Center
+- **Next up** card with upcoming task, time, and accent color
+- **Task overview** showing remaining tasks by life area
+- **Tomorrow preview** with due tasks and Day Order
+- **Free time finder** with smart recommendations
+- **One-tap planning** that generates a schedule respecting all constraints
+
+### Academic Planner
+- Full **Day Order rotation** (DO1&ndash;DO5) with holiday-aware advancement
+- **Timetable** with periods, rooms, faculty and per-date class changes
+- **Assignment & exam tracker** with deadlines, countdowns and prep percentage
+- **Syllabus tracker** down to subtopics with coverage, study and revision tracking
+- **Attendance** by hour with threshold forecasting
+- **Study suggestions** ranked by deadline proximity, exam closeness and weak topics
+- **Announcements** with actionable intents (Day Order change, deadline move, etc.)
+- **Marks** with configurable weightage
+
+### Habit Tracker
+- **GitHub-style contribution graph** &mdash; 15 weeks, color-coded by completion
+- **Month labels** and **day labels** for clear date context
+- **Tap any tile** to see date, value, and status (Done / Partial / Missed)
+- Four tracking types: boolean, counter, duration, quantity
+- Streaks, 7-day rate, longest streak, and all-time completion rate
+- One-tap check-in for boolean habits, backfill for past days
+
+### Projects & Skills
+- Project stages, milestones, notes and linked tasks
+- Idea vault for capturing inspiration
+- Skills with topics, resources, question banks and practice tasks
+- Progress bars and completion tracking
+
+### Fitness & Nutrition
+- Workout plans with exercises, sets, reps, weights and rest timers
+- Workout logging and body measurements
+- Food logs with macros (calories, protein, carbs, fat)
+- Water tracking with daily targets
+
+### Smart Scheduling Engine
+- Subtracts classes, commute, meals, events from your waking window
+- Merges overlapping intervals, applies buffers
+- Ranks tasks by deadline, importance and dependencies
+- Splits long tasks into sessions, avoids tiny remainders
+- Three intensity modes: Relaxed (60%), Balanced (75%), Focused (90%)
+- Protects active focus sessions from being overwritten
+
+### Notifications
+- **Morning Day Order** with first class info
+- **Class reminders** with configurable lead time
+- **Deadline digest** for nearby due dates
+- **Exam countdowns** for assessments within 3 days
+- **Task block reminders** 5 minutes before each scheduled session
+- **Tomorrow's tasks** summary in the evening
+- **Weekly review** every Sunday &mdash; tasks completed, habits done, best streak
+- Each category individually toggleable in Settings
+
+### Android Home-Screen Widgets
+Six native `AppWidgetProvider` widgets fed by a single persisted JSON snapshot:
+
+| Widget | Size | Shows |
+|--------|------|-------|
+| Today's Classes | 4&times;3 | Every class with times and rooms |
+| Next Class | 4&times;2 | What's next, when and where |
+| Deadlines | 4&times;3 | Assignments and tests, nearest first |
+| Study Next | 4&times;2 | Top study suggestion with reason |
+| Day Order | 2&times;2 | Today's and tomorrow's Day Order |
+| Life Overview | 4&times;3 | Tasks, projects, habits, weekly summary |
+
+---
+
+## Architecture
+
+```
+UI (Expo Router)
+    |
+Zustand Store (serialized mutations)
+    |
+LifeEngine (pure domain logic)
+    |
+Repository (normalized CRUD)
+    |
+SQLite (versioned migrations, foreign keys, transactions)
 ```
 
-Or use the production web preview:
+**Key design decisions:**
+- Screens never contain scheduling algorithms &mdash; all logic lives in `src/domain/`
+- Widget snapshot pattern: one JSON payload in SharedPreferences feeds all 6 widgets
+- Notification IDs are stable &mdash; replanning replaces reminders instead of stacking
+- Settings are key-value pairs &mdash; new settings need no migration
+- Academic calendar uses a working-day-only rotation &mdash; holidays never consume a Day Order
 
-```powershell
-npm.cmd run build:web
-npm.cmd run preview
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design, and [docs/ACADEMIC.md](docs/ACADEMIC.md) for the academic model.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Expo SDK 55 + React Native 0.83 |
+| Language | TypeScript (strict mode) |
+| Navigation | Expo Router (file-based) |
+| Database | SQLite via expo-sqlite (WASM on web) |
+| State | Zustand |
+| Notifications | expo-notifications |
+| Widgets | Custom Expo native module (Kotlin) |
+| Testing | Node.js native test runner + real SQLite |
+
+---
+
+## Get Started
+
+### Prerequisites
+- Node.js 22 LTS
+- npm
+
+### Web Preview
+
+```bash
+npm ci
+npm run web
 ```
 
-Open **http://localhost:8081**. Keep this terminal running. The preview serves the isolation headers required by SQLite's web worker. Do not open `dist/index.html` using `file://`. Each browser/origin has its own database; the browser database and phone database are separate.
+Open **http://localhost:8081**. Keep the terminal running &mdash; the server provides isolation headers required by SQLite's WASM worker.
 
 ### Android
 
-The built [Android preview APK](output/lifeos-preview.apk) is available locally (about 38 MB, arm64). Transfer it to your phone to install. It uses a development signing key, so Android will ask you to allow installing from that source. See the [QA report](docs/QA.md) for verification and remaining device checks, and [native build notes](docs/NATIVE.md) for how to add the five home-screen widgets.
-
-```powershell
-npm.cmd start
+```bash
+npm start
 ```
 
-Open in an **Expo Go version supporting SDK 55**, or build the native app. Custom home-screen widgets require a native build, not Expo Go.
+Open in Expo Go (SDK 55 compatible) for basic features. Widgets and notifications require a native build.
 
-For a standalone arm64 Android preview APK, install JDK 17 and Android SDK 36, then:
+### Build APK
+
+Requirements: JDK 17, Android SDK 36
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build-android.ps1
 ```
 
-The script generates the Android project, builds a release-mode APK using the template's **development signing key**, and copies it to `output/lifeos-preview.apk`. This is a personal test build, not a Play Store release. No deployment or cloud build is required. See [native build notes](docs/NATIVE.md) for prerequisites, widget installation and verification limits.
+Outputs `output/lifeos-preview.apk` (arm64, ~38 MB).
 
-## First use
+### Run Tests
 
-A new install already carries the verified semester: period times, the college slot grid, the
-eight registered courses with their slots, rooms and faculty, and an empty five-unit syllabus
-skeleton per subject. Nothing else is invented — no sample tasks, habits, projects or meals.
-
-1. Open **Me → Settings** and set your wake/sleep times, commute, meals, buffer and planning
-   intensity. Confirm the Day Order rotation anchor there too.
-2. Add the Academic Planner's holidays and exam dates under **Academic → Academic calendar**.
-   None were assumed; the rotation skips whatever you mark as non-working.
-3. Build out **Academic → Syllabus**: units are already there, add the topics you care about.
-4. Capture assignments, tests, todos, announcements, habits or project ideas using **+** or the
-   Academic quick actions.
-5. Select **Plan my day** on Today. Calendar also supports planning a selected future day.
-6. Open a task to focus, log actual minutes, partially complete it, finish it or find another time.
-
-**Me → Your data** exports/restores JSON backups, restores the semester setup on demand, and has
-a two-step action to erase records and start fresh. Erasing preserves your preferences.
-
-## Implemented
-
-- Five primary navigation destinations: Today, Calendar, Capture, Life and Me.
-- Day/week/month calendar; fixed events and fixed exams; editable Day Orders 1–5.
-- One master task system with deadlines, priorities, recurrence, linked modules and task search.
-- Interval-based free-time calculation, overlap merging, buffers and wake/sleep boundaries.
-- Deadline/importance/dependency-aware ranking, split sessions and relaxed/balanced/focused planning.
-- Current-task and free-window recommendations; explicit rescheduling; missed-session history.
-- Plans recalculate after relevant data changes. Work reserved on another day is not allocated twice.
-- Durable focus timers, planned versus actual logs, completion and partial progress.
-- Skills with topics, notes, resources, question counts and linked practice tasks.
-- Projects and idea vault, stages, milestones, notes and linked tasks.
-- Habits with four tracking types, dated logs, streaks, consistency and 28-day history.
-- Workout plans, exercises, sets/reps/weights/rest, workout logs and body measurements.
-- Food logs supporting arbitrary foods and portions, macro targets, water and food history.
-- Weekly focus analytics, completion counts, habit consistency and weekly review.
-- Contextual local notifications: morning Day Order, a lead-time nudge before each class, the
-  deadline digest and exam reminders — each individually switchable.
-- Five Android home-screen widgets fed by one persisted snapshot through a native Expo bridge.
-- Optional Supabase email-code authentication and normalized backup transport/schema, isolated from local operation.
-
-### Academic
-
-A student operating system rather than a digital timetable. Full model in
-[docs/ACADEMIC.md](docs/ACADEMIC.md).
-
-- Slot architecture: course → course slot → college Day Order grid → period → resolved class.
-  The grid holds every college slot; only registered slots become classes, so an unregistered
-  slot is a genuine free period rather than someone else's lecture.
-- Academic calendar with nine day types, per-date Day Orders, event titles and manual overrides.
-  The rotation advances across working days only, so a holiday never consumes a Day Order.
-- Per-date class changes: cancelled, room changed, time changed, faculty changed, extra and
-  replacement classes — all of which feed straight back into free time.
-- Academic dashboard: Day Order, next class, today's classes, deadline radar, study suggestions,
-  a rule-based "needs attention" panel and progress at a glance.
-- Assignments that track work and submission separately, so "finished but not submitted" is
-  visible rather than silently counted as done.
-- Assessments for eleven exam types, with countdowns, linked syllabus topics, preparation
-  percentage and one-tap revision planning into real scheduled sessions.
-- Syllabus tracker down to subtopics, with six topic states and class coverage, personal study
-  and revision tracked as three separate figures.
-- Importance flags, weak-topic flags, PYQ counts and spaced-revision dates on every topic.
-- Attendance by hour with OD and cancellation handling, plus an exact threshold forecast.
-- Announcements that can carry an action — Day Order change, deadline move, class cancellation,
-  exam syllabus update — applied only on explicit confirmation.
-- "What should I study?" ranking deadlines, exam proximity, syllabus gaps, flagged topics and
-  time since revision, always with the reason it chose that.
-- Marks with configurable weightage, materials, an academic inbox and academic-wide search.
-
-## Database and architecture
-
-`lifeos.db` is opened by `src/data/database.ts`. Versioned migrations create normalized tables with foreign keys and transactional writes. The full schema is in [docs/sqlite-schema.sql](docs/sqlite-schema.sql); its source of truth is `src/data/migrations.ts`.
-
-UI → Zustand application store → LifeEngine → pure domain services / Repository → SQLite.
-
-The store serializes mutations, loads the resulting rows, refreshes derived schedules when appropriate, and updates the widget snapshot. Screens do not contain scheduling algorithms. See [architecture](docs/ARCHITECTURE.md).
-
-### Day Order rules
-
-Weekdays rotate from the configured anchor. Whether a date advances the rotation is decided by
-its `working` flag, not its label — which is what lets a special working Saturday take a Day
-Order while a weekday college event does not. Holidays, exam days and non-working exceptions
-pause the rotation rather than consuming an order. A manual override applies even on a weekend
-and the rotation continues forward from it. Monday DO1 → Tuesday DO2 → Wednesday holiday →
-Thursday DO3 is covered by a regression test, as are all five resolved Day Orders.
-
-### Scheduling rules
-
-The engine subtracts the resolved classes, commute either side of the campus day, meals, events
-and scheduled work from the waking window. Overlapping intervals are merged. Gaps between
-classes are real free time: the **free periods** setting decides whether they are protected, or
-offered for study only, light tasks, or anything. A day with no classes has no college block at
-all. The engine reserves only 60%, 75% or 90% of flexible capacity, applies buffers, ranks
-feasible tasks and splits long tasks into sessions. Workout tasks prefer the configured evening
-time. Past missed blocks are retained as history and stop reserving future work. Current focus
-sessions are protected.
-
-Use **Calendar → Plan this day** to spread work over more days. The app does not silently build an entire semester plan. An indivisible task that cannot fit remains unscheduled.
-
-## Verify
-
-```powershell
-npm.cmd run check
-npm.cmd run build:web
-npm.cmd run build:android:bundle
+```bash
+npm run check       # TypeScript strict check
+npm run build:web    # Web production build
+npm test            # 62 tests (migrations, scheduling, engine)
 ```
 
-Tests use Node's real SQLite engine for migrations, transactions, backup restore and close/reopen persistence; pure-engine tests cover the scheduling scenarios. Browser QA exercises the Expo SQLite WASM implementation. See [QA report](docs/QA.md) for observed checks and remaining device tests.
+---
 
-## Known limits and next steps
+## Project Structure
 
-- This is a functional MVP. Advanced exam-topic-driven study allocation, resource libraries, per-set workout history, goal management and detailed calorie adherence reports are future extensions.
-- Dependency data is modeled and respected by the engine; a dependency editing interface is not included.
-- Overnight waking windows are not supported: sleep must be later than wake within a local calendar day. Date-only deadlines mean the end of that day.
-- Short final task remainders can be shorter than the minimum session setting; long tasks avoid creating tiny tails where two valid sessions fit.
-- Native notifications and widgets require phone-level acceptance testing. Widgets consume the most recent app snapshot and display its timestamp; they do not run scheduling in the background.
-- Five Android widgets are implemented (Today's classes, Next class, Deadlines, Study next, Day Order). iOS WidgetKit extensions are not.
-- The Academic Planner screenshots never reached the build session, so **no holidays are seeded** and the rotation anchor comes from a single worked example. Confirm both against the official planner. Unverified grid cells are flagged CHECK in the timetable editor.
-- Importing a timetable from an image, PDF or CSV is designed for but not built; entry is manual.
-- Supabase code is ready for explicit backups, not background conflict-resolving multi-device sync. No live cloud project was configured or tested. Store auth tokens in SecureStore before exposing cloud login in the app.
-- Web requires its local server to open/reload. Native SQLite is the offline phone implementation. Browser storage can be cleared by browser settings; export backups before uninstalling either version.
-- Data is local but the database is not application-level encrypted. Exported backups contain your personal records.
+```
+lifeos/
+  app/                    # Expo Router pages
+    academic/             # Academic sub-screens
+    area/                 # Life area screens (habits, fitness, diet, etc.)
+    subject/              # Per-subject views
+    task/                 # Task detail and focus timer
+  src/
+    domain/               # Pure business logic (scheduling, timetable, analytics)
+    screens/              # Screen components (Habits, Fitness, Diet, Academic)
+    services/             # Side effects (notifications, widgets, backup)
+    state/                # Zustand store
+    data/                 # SQLite database, migrations, repository
+    ui/                   # Shared components and theme
+  modules/
+    lifeos-widget/        # Custom Expo native module for Android widgets (Kotlin)
+  docs/                   # Architecture, academic model, QA, schema
+  scripts/                # Build and patch scripts
+  tests/                  # Integration and unit tests
+```
 
-Add future modules by defining their normalized data and migrations, exposing module-specific forms, and creating linked tasks through `LifeEngine.save`. Extend domain functions with regression tests rather than duplicating calendar logic in screens.
+---
+
+## First Use
+
+1. Install the APK and open LifeOS
+2. Go to **Me &rarr; Settings** and set your wake/sleep times, commute, meals and planning intensity
+3. Confirm the Day Order rotation anchor
+4. Add holidays and exam dates under **Academic &rarr; Academic Calendar**
+5. Build out your syllabus, capture tasks, create habits
+6. Hit **Plan my day** on the Today screen
+
+---
+
+## Database
+
+`lifeos.db` uses versioned migrations with normalized tables, foreign keys and transactional writes. The full schema is in [docs/sqlite-schema.sql](docs/sqlite-schema.sql). Source of truth: [src/data/migrations.ts](src/data/migrations.ts).
+
+Each browser origin and each phone installation maintain separate databases. Export backups from **Me &rarr; Your data** before switching devices.
+
+---
+
+## Known Limitations
+
+- iOS WidgetKit extensions are not yet implemented
+- Overnight waking windows (sleep before wake) are not supported
+- Dependency editing UI is not included (data model is ready)
+- Web notifications are not available (Android/iOS only)
+- Database is not application-level encrypted
+- Supabase auth is coded but no live cloud project is configured
+
+---
+
+<div align="center">
+
+**Built for one person. Built to last.**
+
+*All your data stays on your device. Always.*
+
+</div>

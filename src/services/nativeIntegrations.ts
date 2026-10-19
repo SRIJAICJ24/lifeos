@@ -7,6 +7,8 @@ import {
   assessmentPreparation,
   displayName,
 } from "../domain/academic";
+import { actionable } from "../domain/priority";
+import { habitStats } from "../domain/analytics";
 import { clock, dateKey, addDays, daysBetween, duration } from "../domain/time";
 export async function refreshIntegrations(data: Data) {
   if (Platform.OS === "web") return;
@@ -117,6 +119,66 @@ export function plannedNotifications(
         url: "lifeos:///academic/assessments",
       });
     }
+  if (s.notifyTasks) {
+    const plan = data.blocks
+      .filter((b) => b.date === date && b.kind === "session")
+      .sort((a, b) => a.start - b.start);
+    for (const block of plan.slice(0, 5)) {
+      const task = data.tasks.find((t) => t.id === block.taskId);
+      if (!task) continue;
+      const fire = at(date, block.start - 5);
+      if (fire.getTime() <= now.getTime()) continue;
+      out.push({
+        id: `task-${date}-${block.start}`,
+        fire,
+        title: `${task.title} in 5 minutes`,
+        body: `${clock(block.start)} – ${clock(block.end)} · ${Math.ceil(task.estimatedDuration * (1 - task.progress / 100))}m remaining`,
+        url: `lifeos:///task/${task.id}`,
+      });
+    }
+    const tomorrowDate = addDays(date, 1);
+    const tomorrowTasks = data.tasks.filter(
+      (t) => actionable(t) && t.deadline === tomorrowDate,
+    );
+    if (tomorrowTasks.length > 0)
+      out.push({
+        id: `tomorrow-${date}`,
+        fire: at(date, Math.min(s.sleep - 60, 1320)),
+        title: `${tomorrowTasks.length} task${tomorrowTasks.length > 1 ? "s" : ""} due tomorrow`,
+        body: tomorrowTasks
+          .slice(0, 3)
+          .map((t) => t.title)
+          .join(", "),
+        url: "lifeos:///tasks",
+      });
+  }
+  if (s.notifyWeekly) {
+    const todayDow = new Date(`${date}T00:00:00`).getDay();
+    const sundayOffset = todayDow === 0 ? 0 : 7 - todayDow;
+    const sunday = addDays(date, sundayOffset);
+    const weekStart = addDays(sunday, -6);
+    const tasksCompleted = data.tasks.filter(
+      (t) =>
+        t.completedAt &&
+        t.completedAt.slice(0, 10) >= weekStart &&
+        t.completedAt.slice(0, 10) <= sunday,
+    ).length;
+    const habitsDone = data.habits.filter((h) => {
+      const stat = habitStats(h, data, date);
+      return stat.value >= h.target;
+    }).length;
+    const topStreak = data.habits.reduce((best, h) => {
+      const stat = habitStats(h, data, date);
+      return Math.max(best, stat.streak);
+    }, 0);
+    out.push({
+      id: `weekly-${sunday}`,
+      fire: at(sunday, Math.min(s.sleep - 60, 1260)),
+      title: "Your weekly review",
+      body: `${tasksCompleted} task${tasksCompleted !== 1 ? "s" : ""} completed · ${habitsDone}/${data.habits.length} habits done today · best streak: ${topStreak} days`,
+      url: "lifeos:///me",
+    });
+  }
   return out.filter((p) => p.fire.getTime() > now.getTime() + 1000);
 }
 async function syncNotifications(data: Data) {

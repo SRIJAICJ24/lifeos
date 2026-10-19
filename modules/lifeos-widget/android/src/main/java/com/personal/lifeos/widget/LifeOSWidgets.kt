@@ -46,7 +46,8 @@ abstract class LifeOSBaseWidget : AppWidgetProvider() {
       LifeOSNextClassWidget::class.java,
       LifeOSDeadlinesWidget::class.java,
       LifeOSStudyWidget::class.java,
-      LifeOSDayOrderWidget::class.java
+      LifeOSDayOrderWidget::class.java,
+      LifeOSOverviewWidget::class.java
     )
     fun time(m: Int) = "%02d:%02d".format(m / 60, m % 60)
     fun dayOrderLabel(snapshot: JSONObject?) =
@@ -185,6 +186,73 @@ class LifeOSDayOrderWidget : LifeOSBaseWidget() {
       if (snapshot == null) "Open LifeOS"
       else "Tomorrow  " + (tomorrowOrder?.let { "DO$it" }
         ?: tomorrow?.optString("type").orEmpty().ifEmpty { "—" })
+    )
+  }
+}
+
+/** Comprehensive life overview: tasks by area, projects, habits, next task. */
+class LifeOSOverviewWidget : LifeOSBaseWidget() {
+  override val deepLink = "lifeos:///"
+  override fun render(views: RemoteViews, snapshot: JSONObject?) {
+    if (snapshot == null) {
+      fill(views, "LIFEOS · OVERVIEW", "Open LifeOS",
+        "Open the app to see your life at a glance.", synced(null))
+      return
+    }
+    val remaining = snapshot.optJSONObject("remainingByArea")
+    val habits = snapshot.optJSONObject("habitSummary")
+    val nextTask = snapshot.optJSONObject("nextTask")
+    val projects = snapshot.optJSONArray("projectProgress")
+
+    val lines = mutableListOf<String>()
+
+    if (nextTask != null) {
+      lines.add("▶ ${nextTask.optString("title")}  ${time(nextTask.optInt("start"))}")
+    }
+
+    if (remaining != null) {
+      val parts = mutableListOf<String>()
+      val academic = remaining.optInt("academic")
+      val skills = remaining.optInt("skills")
+      val proj = remaining.optInt("projects")
+      val fitness = remaining.optInt("fitness")
+      if (academic > 0) parts.add("Academic: $academic")
+      if (skills > 0) parts.add("Skills: $skills")
+      if (proj > 0) parts.add("Projects: $proj")
+      if (fitness > 0) parts.add("Fitness: $fitness")
+      if (parts.isNotEmpty()) lines.add(parts.joinToString(" · "))
+    }
+
+    if (habits != null) {
+      val done = habits.optInt("done")
+      val total = habits.optInt("total")
+      if (total > 0) lines.add("Habits: $done/$total done")
+    }
+
+    projects.map(3) {
+      val progress = it.optInt("progress")
+      val title = it.optString("title")
+      val status = it.optString("status")
+      lines.add("$title · $status · ${progress}%")
+    }
+
+    val weekly = snapshot.optJSONObject("weeklySummary")
+    if (weekly != null) {
+      val tc = weekly.optInt("tasksCompleted")
+      val hr = weekly.optInt("habitsRate")
+      val fm = weekly.optInt("focusMinutes")
+      lines.add("Week: ${tc} done · ${hr}% habits · ${fm}m focus")
+    }
+
+    val tomorrowCount = snapshot.optInt("tomorrowTaskCount")
+    if (tomorrowCount > 0) lines.add("Tomorrow: $tomorrowCount task${if (tomorrowCount > 1) "s" else ""} due")
+
+    val totalTasks = remaining?.optInt("total") ?: 0
+    fill(
+      views, "LIFEOS · OVERVIEW",
+      if (totalTasks > 0) "$totalTasks tasks open" else "All clear",
+      if (lines.isEmpty()) "Nothing pending. Time to breathe." else lines.joinToString("\n"),
+      synced(snapshot)
     )
   }
 }

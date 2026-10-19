@@ -14,7 +14,7 @@ The reproducible postinstall patch updates React Native 0.83's bundled Foojay re
 ## Widgets
 
 The source is `modules/lifeos-widget/android/`. Expo autolinking discovers the module during
-prebuild, and its library manifest contributes five real `AppWidgetProvider` receivers.
+prebuild, and its library manifest contributes six real `AppWidgetProvider` receivers.
 
 | Widget | Default size | Shows | Opens |
 |---|---|---|---|
@@ -23,15 +23,16 @@ prebuild, and its library manifest contributes five real `AppWidgetProvider` rec
 | LifeOS · Deadlines | 4×3 | Assignments and tests, nearest first | Assignments |
 | LifeOS · Study next | 4×2 | The top study suggestion and its reason | Study plan |
 | LifeOS · Day Order | 2×2 | Today's and tomorrow's Day Order | Academic calendar |
+| LifeOS · Life Overview | 4×3 | Tasks by area, projects, habits, next task | Today |
 
-All five are resizable, and all five read the same snapshot, so they always agree with each other.
+All six are resizable, and all six read the same snapshot, so they always agree with each other.
 
 ### Adding them on the phone
 
 1. Install the APK and open LifeOS once — the snapshot is written on first load and after every
    change, so a widget added before that shows "Open LifeOS to refresh".
 2. Long-press an empty spot on the home screen → **Widgets**.
-3. Scroll to **LifeOS**. All five appear under it with a one-line description each.
+3. Scroll to **LifeOS**. All six appear under it with a one-line description each.
 4. Long-press one and drag it out, or tap it to place it. Drag the handles to resize.
 5. Tap the widget to open the matching screen in the app.
 
